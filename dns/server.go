@@ -45,11 +45,11 @@ func Start() {
     dns.HandleFunc(".", Handler)
 
     server := &dns.Server{
-        Addr: ":53",
+        Addr: ":5454",
         Net:  "udp",
     }
 
-    log.Println("DNS server listening on UDP :53")
+    log.Println("DNS server listening on UDP :5454")
 
     // ListenAndServe blocks forever, handling queries in goroutines.
     if err := server.ListenAndServe(); err != nil {
