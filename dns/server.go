@@ -3,6 +3,7 @@ package dns
 import (
     "fmt"
     "log"
+    "strings"
 
     "github.com/miekg/dns"
     "dns-blocker/blocklist"
@@ -28,14 +29,22 @@ func Start(list *blocklist.List) {
 }
 
 func Handler(w dns.ResponseWriter, r *dns.Msg) {
+
     if len(r.Question) == 0 {
         return
     }
 
     question := r.Question[0]
+
+    if question.Name == "" {
+        return
+    }
+
+    normalized := strings.ToLower(question.Name)
+
     fmt.Printf("Query: %-40s type=%d\n", question.Name, question.Qtype)
 
-    if bl.IsBlocked(question.Name) {
+    if bl.IsBlocked(normalized) {
         block(w, r)
         return
     }
@@ -45,9 +54,8 @@ func Handler(w dns.ResponseWriter, r *dns.Msg) {
 
 func block(w dns.ResponseWriter, r *dns.Msg) {
     m := new(dns.Msg)
-
     m.SetReply(r)
-    m.SetRcode(r, dns.RcodeNameError) // RcodeNameError = NXDOMAIN
+    m.SetRcode(r, dns.RcodeNameError)
 
     log.Printf("Blocked: %s", r.Question[0].Name)
     w.WriteMsg(m)
@@ -56,9 +64,16 @@ func block(w dns.ResponseWriter, r *dns.Msg) {
 func forward(w dns.ResponseWriter, r *dns.Msg) {
     c := new(dns.Client)
     resp, _, err := c.Exchange(r, "1.1.1.1:53")
+
     if err != nil {
         log.Printf("Forward error: %v", err)
+
+        m := new(dns.Msg)
+        m.SetReply(r)
+        m.SetRcode(r, dns.RcodeServerFailure)
+        w.WriteMsg(m)
         return
     }
+
     w.WriteMsg(resp)
 }
