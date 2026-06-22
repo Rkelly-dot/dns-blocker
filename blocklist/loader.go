@@ -6,6 +6,7 @@ import (
     "net/http"
     "strings"
     "sync"
+    "time"
 )
 
 type List struct {
@@ -107,4 +108,16 @@ func fetchAndParse(url string, dest map[string]struct{}) (int, error) {
     }
 
     return count, scanner.Err()
+}
+func (l *List) StartAutoReload(interval time.Duration) {
+    ticker := time.NewTicker(interval)
+
+    go func() {
+        for range ticker.C {
+            log.Println("Auto-reload triggered, refreshing blocklist...")
+            if err := l.Load(); err != nil {
+                log.Printf("Auto-reload failed: %v", err)
+            }
+        }
+    }()
 }
