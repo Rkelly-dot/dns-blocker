@@ -29,20 +29,22 @@ func Start(list *blocklist.List) {
 }
 
 func Handler(w dns.ResponseWriter, r *dns.Msg) {
-
     if len(r.Question) == 0 {
         return
     }
 
     question := r.Question[0]
-
     if question.Name == "" {
         return
     }
 
     normalized := strings.ToLower(question.Name)
 
-    fmt.Printf("Query: %-40s type=%d\n", question.Name, question.Qtype)
+    if strings.Contains(normalized, "spotify") {
+        log.Printf("[SPOTIFY] Query: %s", normalized)
+    } else {
+        fmt.Printf("Query: %-40s type=%d\n", question.Name, question.Qtype)
+    }
 
     if bl.IsBlocked(normalized) {
         block(w, r)
