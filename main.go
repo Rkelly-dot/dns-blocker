@@ -2,6 +2,8 @@ package main
 
 import (
     "log"
+    "time"
+
     "dns-blocker/blocklist"
     dnsserver "dns-blocker/dns"
 )
@@ -15,5 +17,6 @@ func main() {
     }
 
     // Start the DNS server, passing in the loaded blocklist.
+    bl.StartAutoReload(24 * time.Hour)
     dnsserver.Start(bl)
 }
