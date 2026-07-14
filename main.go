@@ -6,6 +6,7 @@ import (
 
 	"dns-blocker/blocklist"
 	dnsserver "dns-blocker/dns"
+	"dns-blocker/store"
 )
 
 func main() {
@@ -17,7 +18,9 @@ func main() {
 
 	bl.StartAutoReload(24 * time.Hour)
 
+	ql := store.NewQueryLog(1000)
+
 	go dnsserver.StartDoH(":8443", "cert.pem", "key.pem")
 
-	dnsserver.Start(bl)
+	dnsserver.Start(bl, ql)
 }
