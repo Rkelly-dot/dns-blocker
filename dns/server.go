@@ -4,6 +4,7 @@ import (
     "fmt"
     "log"
     "strings"
+    "time"
 
     "github.com/miekg/dns"
     "dns-blocker/blocklist"
@@ -52,12 +53,14 @@ func buildBlockedResponse(r *dns.Msg) *dns.Msg {
 // buildForwardedResponse sends the query to 1.1.1.1 and returns whatever comes back.
 // If forwarding fails, it builds a SERVFAIL response instead of returning nil.
 func buildForwardedResponse(r *dns.Msg) *dns.Msg {
-    c := new(dns.Client)
-    resp, _, err := c.Exchange(r, "1.1.1.1:53")
+    c := &dns.Client{
+        Net:     "udp",
+        Timeout: 5 * time.Second, // explicit timeout, don't rely on default
+    }
 
+    resp, _, err := c.Exchange(r, "1.1.1.1:53")
     if err != nil {
         log.Printf("Forward error: %v", err)
-
         m := new(dns.Msg)
         m.SetReply(r)
         m.SetRcode(r, dns.RcodeServerFailure)
