@@ -1,22 +1,23 @@
 package main
 
 import (
-    "log"
-    "time"
+	"log"
+	"time"
 
-    "dns-blocker/blocklist"
-    dnsserver "dns-blocker/dns"
+	"dns-blocker/blocklist"
+	dnsserver "dns-blocker/dns"
 )
 
 func main() {
-    bl := blocklist.New()
+	bl := blocklist.New()
 
-    // Load blocklist before accepting any queries.
-    if err := bl.Load(); err != nil {
-        log.Fatalf("Failed to load blocklist: %v", err)
-    }
+	if err := bl.Load(); err != nil {
+		log.Fatalf("Failed to load blocklist: %v", err)
+	}
 
-    // Start the DNS server, passing in the loaded blocklist.
-    bl.StartAutoReload(24 * time.Hour)
-    dnsserver.Start(bl)
+	bl.StartAutoReload(24 * time.Hour)
+
+	go dnsserver.StartDoH(":8443", "cert.pem", "key.pem")
+
+	dnsserver.Start(bl)
 }
