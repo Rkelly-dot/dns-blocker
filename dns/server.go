@@ -22,11 +22,11 @@ func Start(list *blocklist.List, ql *store.QueryLog) {
 	dns.HandleFunc(".", Handler)
 
 	server := &dns.Server{
-		Addr: ":5454",
+		Addr: ":53",
 		Net:  "udp",
 	}
 
-	log.Println("DNS server listening on UDP :5454")
+	log.Println("DNS server listening on UDP :53")
 
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("Failed to start DNS server: %v", err)
