@@ -20,7 +20,7 @@ func main() {
 
 	ql := store.NewQueryLog(1000)
 
-	go dnsserver.StartDoH(":8443", "cert.pem", "key.pem")
+	go dnsserver.StartDoH(":443", "cert.pem", "key.pem")
 
 	dnsserver.Start(bl, ql)
 }
