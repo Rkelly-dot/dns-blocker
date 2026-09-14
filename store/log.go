@@ -17,7 +17,7 @@ type QueryLog struct {
 	capacity int
 	head     int 
 	count    int 
-
+}
 func NewQueryLog(capacity int) *QueryLog {
 	return &QueryLog{
 		entries:  make([]QueryEntry, capacity),
