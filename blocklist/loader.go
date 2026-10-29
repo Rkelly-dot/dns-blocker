@@ -10,16 +10,29 @@ import (
 )
 
 type List struct {
-	mu      sync.RWMutex
+	mu sync.RWMutex
+
+	// domains is the downloaded feed. It is replaced wholesale on reload.
 	domains map[string]struct{}
+
+	// manualBlocks and manualAllows hold user rules. They live in their own
+	// maps so a blocklist reload can never discard them, and a manual allow
+	// always beats a feed entry.
+	manualBlocks map[string]struct{}
+	manualAllows map[string]struct{}
 }
 
 func New() *List {
 	return &List{
-		domains: make(map[string]struct{}),
+		domains:      make(map[string]struct{}),
+		manualBlocks: make(map[string]struct{}),
+		manualAllows: make(map[string]struct{}),
 	}
 }
 
+// IsBlocked reports whether a query for domain should be refused. Manual
+// allow rules are checked first so they can punch a hole in a downloaded
+// blocklist entry for the domain or any of its subdomains.
 func (l *List) IsBlocked(domain string) bool {
 	domain = strings.TrimSuffix(domain, ".")
 	domain = strings.ToLower(domain)
@@ -27,8 +40,20 @@ func (l *List) IsBlocked(domain string) bool {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 
+	if matchesSuffix(l.manualAllows, domain) {
+		return false
+	}
+	if matchesSuffix(l.manualBlocks, domain) {
+		return true
+	}
+	return matchesSuffix(l.domains, domain)
+}
+
+// matchesSuffix walks the domain and each parent domain until it finds a
+// match or runs out of labels. Callers must hold at least a read lock.
+func matchesSuffix(set map[string]struct{}, domain string) bool {
 	for {
-		if _, blocked := l.domains[domain]; blocked {
+		if _, ok := set[domain]; ok {
 			return true
 		}
 		idx := strings.Index(domain, ".")
@@ -39,23 +64,46 @@ func (l *List) IsBlocked(domain string) bool {
 	}
 }
 
-// AddTemporary manually inserts a single domain into the blocklist.
-// Wiped on the next 24h reload — persistent rules come in Milestone 5.
-func (l *List) AddTemporary(domain string) {
+// AddManual blocks a single domain. Manual rules are kept separately from
+// the downloaded feeds and survive blocklist reloads.
+func (l *List) AddManual(domain string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.domains[domain] = struct{}{}
-	log.Printf("Manually added temporary block: %s", domain)
+	delete(l.manualAllows, domain)
+	l.manualBlocks[domain] = struct{}{}
+	log.Printf("Rule applied: block %s", domain)
 }
 
-// RemoveTemporary removes a single domain from the in-memory blocklist.
-// Like AddTemporary, this is wiped on the next 24h reload.
-// Persistent removes come in Milestone 5 via SQLite.
-func (l *List) RemoveTemporary(domain string) {
+// RemoveManual drops a manual block rule.
+func (l *List) RemoveManual(domain string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	delete(l.domains, domain)
-	log.Printf("Manually removed temporary block: %s", domain)
+	delete(l.manualBlocks, domain)
+	log.Printf("Rule removed: block %s", domain)
+}
+
+// AddAllow explicitly allows a domain, overriding any feed entry.
+func (l *List) AddAllow(domain string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	delete(l.manualBlocks, domain)
+	l.manualAllows[domain] = struct{}{}
+	log.Printf("Rule applied: allow %s", domain)
+}
+
+// RemoveAllow drops a manual allow rule.
+func (l *List) RemoveAllow(domain string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	delete(l.manualAllows, domain)
+	log.Printf("Rule removed: allow %s", domain)
+}
+
+// Size returns the number of downloaded domains plus manual block rules.
+func (l *List) Size() int {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return len(l.domains) + len(l.manualBlocks)
 }
 
 var sources = []string{
