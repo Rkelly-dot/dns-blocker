@@ -1,2 +1,8 @@
 cert.pem
 key.pem
+web/node_modules/
+web/.vite/
+rules.db
+rules.db-wal
+rules.db-shm
+.env
