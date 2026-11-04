@@ -1,0 +1,10 @@
+services:
+  nullify:
+    build: .
+    restart: unless-stopped
+    network-mode: host
+    env_file: .env
+    volumes:
+      - ./rules.db:/app/rules.db
+      - ./cert.pem:/app/cert.pem
+      - ./key.pem:/app/key.pem
