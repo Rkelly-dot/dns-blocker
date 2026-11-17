@@ -1,0 +1,47 @@
+name: Deploy Nullify
+
+# When does this pipeline run?
+on:
+  push:
+    branches: [main]  # only when you push to main, not other branches
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest  # GitHub spins up a fresh Ubuntu VM for this job
+
+    steps:
+      # 1. Download your repo code onto the runner VM
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Install Go on the runner VM
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod  # reads the Go version from your go.mod
+
+      # 3. Run your tests — pipeline stops here if any test fails
+      - name: Run tests
+        run: go test ./...
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: test  # this job only runs if the test job above passed
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # SSH into your Oracle server and run the deploy commands
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3  # a trusted GitHub Action for SSH
+        with:
+          host: ${{ secrets.SERVER_HOST }}      # reads from GitHub Secrets
+          username: ${{ secrets.SERVER_USER }}  # reads from GitHub Secrets
+          key: ${{ secrets.SERVER_SSH_KEY }}    # reads from GitHub Secrets
+          script: |
+            cd ~/dns-blocker
+            git pull origin main
+            docker compose up -d --build
