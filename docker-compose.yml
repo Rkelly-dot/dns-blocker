@@ -2,9 +2,9 @@ services:
   nullify:
     build: .
     restart: unless-stopped
-    network-mode: host
+    network_mode: host
     env_file: .env
     volumes:
       - ./rules.db:/app/rules.db
       - ./cert.pem:/app/cert.pem
-      - ./key.pem:/app/key.pem
+      - ./key.pem:/app/key.pemrm 

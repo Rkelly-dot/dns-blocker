@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:1.26-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
@@ -6,13 +6,10 @@ COPY . .
 RUN go build -o nullify .
 
 FROM alpine:3.20
-
-RUN apk --add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates
 WORKDIR /app
-COPY --from+builder /app/nullify
-
+COPY --from=builder /app/nullify .
 EXPOSE 53/udp
 EXPOSE 443
 EXPOSE 8080
-
-CMD["/nullify"]
+CMD ["./nullify"]
